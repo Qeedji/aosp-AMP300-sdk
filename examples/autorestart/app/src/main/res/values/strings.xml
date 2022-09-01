@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Test auto-restart</string>
+    <string name="button">Crash</string>
+</resources>

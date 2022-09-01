@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">System Button</string>
+    <string name="label">Number of press button detected :</string>
+    <string name="value">0</string>
+</resources>

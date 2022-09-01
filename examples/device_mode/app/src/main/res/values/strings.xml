@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Device Mode</string>
+    <string name="_native">Native</string>
+    <string name="_kiosk">Kiosk</string>
+    <string name="_end">End</string>
+</resources>
