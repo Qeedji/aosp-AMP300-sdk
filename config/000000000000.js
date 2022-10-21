@@ -1,6 +1,6 @@
 /**
  * Function: configuration-by-script for Qeedji AOSP devices
- * Version: 1.10.17
+ * Version: 1.10.18 *
  * File name pattern: the file name must match one of these formats:
  * - common to several devices 
  *    - 000000000000.js
@@ -8,8 +8,8 @@
  * - specific for one device 
  * 	  - <Device_MAC>.js (format ABCDEFABCDEF.js).
  *      - If the device has a builtin LAN connector, <Device_MAC> value comes from the LAN MAC adress
- *      - Else, <Device_MAC> value comes from the WLAN MAC adress
- *      - Exception : If the device hasn't a builtin LAN connector, but use an external ethernet adapter, <Device_MAC> value comes from the LAN MAC adress of the external adapter
+ *      - Else, <Device_MAC> value comes from the WLAN_1 MAC adress
+ *      - Exception : If the device hasn't a builtin RJ45 connector, but use an external ethernet adapter, <Device_MAC> value comes from the LAN MAC address of the external adapter
  */
 
 // ---------------------------------------
@@ -18,6 +18,11 @@
 // ---------------------------------------
 // ---------------------------------------
 
+if (!checkCompatibility()) {
+	return false;
+}
+
+let platform = getPlatform();
 
 // ---------------------------------------
 // ---- Configuration / Administrator
@@ -48,72 +53,27 @@
 // ---- Allows to set the credential affected to the WebDAV connection profile: uncomment the line after.
 //setWebserverCredentialWebDav("default"); // The parameter is the credential label. Be sure it exists.
 
-
 // ---------------------------------------
-// ---- Configuration / LAN
+// ---- Configuration / Certificats (1 of 2) 
 // ---------------------------------------
-
-// ---- Allows to configure LAN in DHCP: uncomment the line after. This function disables too the LAN security.
-//setLanByDhcp();
-
-// ---- Allows to configure LAN in static: uncomment the line after. This function disables too the LAN security.
-//setLanIpAddress("192.168.0.2", "255.255.255.0", "192.168.0.6", "192.168.0.1", null); // 1: address, 2: netmask, 3: gateway, 4: dns1, 5: dns2
-
-// ---- Allows to configure LAN Proxy server: uncomment the lines after corresponding to your needs.
-//let lanParsedExclList=[]; // If you don't have Proxy exclusion list
-//let lanParsedExclList=["www.domain1.contoso.fr", "www.domain2.contoso.fr"]; // If you have Proxy exclusion list
-//setLanProxy("192.168.1.35", 3128, lanParsedExclList); // 1: address, 2: port, 3: exclusion list. Use this function when no authentication
-//setLanProxyUserPassword("192.168.1.35", 3128, lanParsedExclList, "admin", "admin"); // 1: address, 2: port, 3: exclusion list, 4: username, 5:password. Use this function when user/password authentication
-//deleteLanProxy(); // Removes the proxy
-
-// ---- 802.1X LAN security
-
-//-------------------------------------------------------------------------------------------------------
-// Allows to install a certificate in the "User credentials" part and in "trusted CA certificate" of the Android "Encryption & Credentials" menu 
-// 1) With a text editor (like Notepad++), 
-//      - open the certificate file (.pem, .crt, ...), 
-//      - select the content between from -----BEGIN CERTIFICATE----- included to -----END CERTIFICATE----- included, 
-// 2) Paste then content between the single quote characters 
-// When done with the configuration script, the certificate is automatically set as CA certificate by AOSP 
-//-------------------------------------------------------------------------------------------------------
-let CACertificate=`-----BEGIN CERTIFICATE-----
-
------END CERTIFICATE-----`;
-// Uncomment then the following line to install a trusted CA certificate
-//setCACertificate("CACertificateName", CACertificate);
-
-//-------------------------------------------------------------------------------------------------------
-// Allows to install a certificate in the "User credentials" part of the Android "Encryption & Credentials" menu 
-// 1) With a text editor (like Notepad++), 
-//      - open the certificate file (.pem, .crt, ...), 
-//      - select the content from -----BEGIN CERTIFICATE----- included to -----END CERTIFICATE----- included, 
-// 2) Paste then the content between the single quote characters 
-// When using an unsigned certificate, the certificate is not automatically set as CA certificate by AOSP 
-//-------------------------------------------------------------------------------------------------------
-let userCertificate=`-----BEGIN CERTIFICATE-----
-
------END CERTIFICATE-----`;
-// Uncomment then the following line to install a user credential (user certificate)
-//setUserCertificate("userCertificateName", userCertificate);
-
 //-------------------------------------------------------------------------------------------------------
 // When required for some 802.1X modes, these variables are used to store:
-// 1) the CA certificate file content of your 802.1X/RADIUS server, 
-// 2) the .p12 CLIENT certificate file content for your Qeedji device (one per device) 
+// A) if required by the chosen EAP method and your 802.1X CA certificate validation strategy, fill the caCertificates variable with the file content of your CA certificate of your 802.1X/RADIUS server (higher authority), 
+// B) if required by the chosen EAP method and by your radius server strategy, fill the pkcs12 variable with the file content of your 802.1X user certificate for your Qeedji device (one per device) 
 // In case using a certificates chain, it is possible to enter a certificate list [`-----BEGIN CERTIFICATE----- TODO -----END CERTIFICATE-----`,`-----BEGIN CERTIFICATE----- TODO -----END CERTIFICATE-----`] 
 // The certificate values cannot be empty
+// Once the caCertificates variable and the pkcs12 variable are filled, go in the LAN_1 section or WLAN_1 section to activated the appropriate EAP method
 //-------------------------------------------------------------------------------------------------------
-// 1) When the RADIUS CA certificate is required by the chosen 801.1X security mode, fill the caCertificates variable with the RADIUS server CA certificate values
+// A) When the RADIUS CA certificate is required by the chosen 802.1X security mode, fill the caCertificates variable with the RADIUS server CA certificate values
 // - With a text editor (like Notepad++), 
 //      - edit the RADIUS CA certificate file (.pem, .crt, ...), 
 //      - select the content between from -----BEGIN CERTIFICATE----- included to -----END CERTIFICATE----- included, 
 // - Paste then the content between the single quote characters 
 let caCertificates=[`-----BEGIN CERTIFICATE-----
-
 -----END CERTIFICATE-----`]; 
 
 //-------------------------------------------------------------------------------------------------------
-// 2) When a .p12 CLIENT certificate is required by the chosen 801.1X security mode, fill the pkcs12 variable  
+// B) When a .p12 CLIENT certificate is required by the chosen 801.1X security mode, fill the pkcs12 variable  
 // With a text editor (like Notepad++): 
 //      - copy the .p12 CLIENT certificate (ex: into tmp64.p12)
 //      - edit the CLIENT certificate file (ex: tmp64.p12) with an editor supporting MIME Tools/Base64 encoding (Notepad++ for example), 
@@ -124,79 +84,109 @@ let caCertificates=[`-----BEGIN CERTIFICATE-----
 //-------------------------------------------------------------------------------------------------------
 let pkcs12="";
 
-// ---- Allows to configure LAN security mode: uncomment one of the following line
-//setLanSecurityPEAP_NONE(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server (automatic 2nd phase authentication)
-//setLanSecurityPEAP_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityPEAP_GTC(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityPEAP_MD5(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTLS("my_qeedji_device_identity", caCertificates, pkcs12, "my_p12_password");            // device identity in radius server,, radius server CA certificates, client p12 key (base 64 encoded), password for client p12 key
-//setLanSecurityTTLS_NONE(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server (automatic 2nd phase authentication)
-//setLanSecurityTTLS_PAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_MSCHAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_CHAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_GTC(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_MD5(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_EAP_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // radius server CA certificates, device identity in radius server, anonymousIdentity, device password in radius server
-//setLanSecurityTTLS_TLS("my_qeedji_device_identity", caCertificates, pkcs12, "my_p12_password"); 		   // device identity in radius server, radius server CA certificates, client p12 key (base 64 encoded), password for client p12 key 
-//setLanSecurityPWD("my_qeedji_device_identity", "my_qeedji_device_pwd"); // device identity in radius server, device password in radius server
-//setLanSecurityMD5("my_qeedji_device_identity", "my_qeedji_device_pwd"); // device identity in radius server, device password in radius server
-//setLanSecurityGTC("my_qeedji_device_identity", "my_qeedji_device_pwd"); // device identity in radius server, device password in radius server
-//setLanSecurityMSCHAPV2("my_qeedji_device_identity", "my_qeedji_device_pwd"); // device identity in radius server, device password in radius server
+// ---------------------------------------
+// ---- Configuration / LAN_1
+// ---------------------------------------
 
+// ---- Allows to configure LAN in DHCP: uncomment the line after. This function disables the 802.1X security if no setLanSecurityXXXXXXX function is executed just after.
+//setLanByDhcp(); // default factory mode
+
+// ---- Allows to configure LAN in static: uncomment the line after. This function disables the 802.1X security if no setLanSecurityXXXXXXX function is executed just after.
+//setLanIpAddress("192.168.0.2", "255.255.255.0", "192.168.0.6", "192.168.0.1", null); // 1: address, 2: netmask, 3: gateway, 4: dns1, 5: dns2
+
+// ---- Allows to configure LAN Proxy server: uncomment the lines after corresponding to your needs.
+//let lanParsedExclList=[]; // If you don't have Proxy exclusion list
+//let lanParsedExclList=["www.domain1.contoso.fr", "www.domain2.contoso.fr"]; // If you have Proxy exclusion list
+//setLanProxy("192.168.1.35", 3128, lanParsedExclList); // 1: address, 2: port, 3: exclusion list. Use this function when no authentication
+//setLanProxyUserPassword("192.168.1.35", 3128, lanParsedExclList, "admin", "admin"); // 1: address, 2: port, 3: exclusion list, 4: username, 5:password. Use this function when user/password authentication
+//setLanProxyPAC("http://192.168.0.4/proxy.pac", -1); // 1: url, 2: address, 3: port (put -1 to not change the port). Use this function for automatic proxy configuration.
+//deleteLanProxy(); // Removes the proxy
+
+// ---- Allows to activate 802.1X security on LAN_1: uncomment one of the following line and fill the parameter between quote with yours. The optional "my_qeedji_device_anonymousIdentity" value can be replaced by any value you want
+//setLanSecurityPEAP_NONE(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server (automatic 2nd phase authentication)
+//setLanSecurityPEAP_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityPEAP_GTC(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityPEAP_MD5(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTLS("my_qeedji_device_identity", caCertificates, pkcs12, "my_p12_password"); // 1:device identity in radius server, 2:radius server CA certificates, 3:client p12 key (base 64 encoded), 4:password for client p12 key
+//setLanSecurityTTLS_NONE(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server (automatic 2nd phase authentication)
+//setLanSecurityTTLS_PAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_MSCHAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_CHAP(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_GTC(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_MD5(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_EAP_MSCHAPV2(caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:radius server CA certificates, 2:device identity in radius server, 3:anonymousIdentity, 4:device password in radius server
+//setLanSecurityTTLS_TLS("my_qeedji_device_identity", caCertificates, pkcs12, "my_p12_password"); 		   // 1:device identity in radius server, 2:radius server CA certificates, 3:client p12 key (base 64 encoded), 4:password for client p12 key 
+//setLanSecurityPWD("my_qeedji_device_identity", "my_qeedji_device_pwd"); // 1:device identity in radius server, 2:device password in radius server
+//setLanSecurityMD5("my_qeedji_device_identity", "my_qeedji_device_pwd"); // 1:device identity in radius server, 2:device password in radius server
+//setLanSecurityGTC("my_qeedji_device_identity", "my_qeedji_device_pwd"); // 1:device identity in radius server, 2:device password in radius server
+//setLanSecurityMSCHAPV2("my_qeedji_device_identity", "my_qeedji_device_pwd"); // 1:device identity in radius server, 2:device password in radius server
 
 // ---------------------------------------
-// ---- Configuration / WLAN
+// ---- Configuration / WLAN_1
 // ---------------------------------------
-// !! Before using WLAN, make sure that LAN is set up into DHCP, and LAN network is disconnected (RJ45 cable removed)
 
-// ---- Allows to activate/inactivate the WLAN network interface: uncomment one of the following lines.
+// ---- Allows to activate/inactivate the WLAN_1 network interface: uncomment one of the following lines.
 //enableWlan(); 
 //disableWlan(); // default factory mode
 
-// ---- Allows to configure WLAN in DHCP: uncomment the line after. This function disables too the WLAN security.
+// ---- Allows to configure WLAN_1 in DHCP: uncomment the line after. This function disables the 802.1X security if no setWlanSecurityXXXXXXX function is executed just after.
 //setWlanByDhcp("my_SSID", false); // 1: ssid, 2: hiddenSSID
 
-// ---- Allows to configure WLAN in static: uncomment the line after. This function disables too the LAN security.
+// ---- Allows to configure WLAN_1 in static: uncomment the line after. This function disables the 802.1X security if no setWlanSecurityXXXXXXX function is executed just after.
 //setWlanIpAddress("my_SSID", false, "192.168.1.10", "255.255.128.0", "192.168.0.1", "192.168.0.4", null); // 1: ssid, 2: hiddenSSID, 3: address, 4: netmask, 5: gateway, 6: dns1, 7: dns2
 
-// ---- Allows to configure WLAN Proxy server: uncomment the lines after corresponding to your needs.
+// ---- Allows to configure WLAN_1 Proxy server: uncomment the lines after corresponding to your needs.
 //let wlanParsedExclList=[]; // If you don't have Proxy exclusion list
 //let wlanParsedExclList=["www.domain1.contoso.fr", "www.domain2.contoso.fr"]; // If you have Proxy exclusion list
 //setWlanProxy("my_SSID", "192.168.1.35", 3128, wlanParsedExclList); // 1: ssid, 2: address, 3: port, 4: exclusion list. Use this function when no authentication
 //setWlanProxyUserPassword("my_SSID", "192.168.1.35", 3128, wlanParsedExclList, "admin", "admin"); // 1: ssid, 2: address, 3: port, 4: exclusion list, 5: username, 6:password. Use this function when user/password authentication
-//setWlanProxyPAC("my_SSID", "http://192.168.0.4/proxy.pac", -1); // 1: url, 2: address, 3: port (put -1 to not change the port). Use this function for automatic proxy configuration.
-//deleteWlanProxy("my_SSID"); // Removes the proxy
+//setWlanProxyPAC("my_SSID", "http://192.168.0.4/proxy.pac", -1); // 1: ssid, 2: address, 3: port (put -1 to not change the port). Use this function for automatic proxy configuration.
+//deleteWlanProxy("my_SSID"); // 1: ssid
 
+// ---- Allows to configure WLAN_1 security mode in WEP: uncomment the line after.
+//setWlanSecurityWep("my_SSID", "my_wep_key_value"); // 1: ssid, 2: WEP key: 10 or 26 hexadecimal digits, 5 or 13 ASCII digits
 
-// ---- Allows to configure WLAN security mode in WEP: uncomment the line after.
-//setWlanSecurityWep("my_SSID", "my_wep_key_value"); // 1: ssid, 2: WEP key: 10 or 26 hexadecimal digits, 5 or 13 ASCII digits 
-// ---- Allows to configure WLAN security mode in PSK: uncomment the line after.
-//setWlanSecurityPsk("my_SSID", "my_psk_key_value"); // 1: ssid, 2: PSK key: 8 to 63 hexadecimal digits
+// ---- Allows to configure WLAN_1 security mode WPA-Personal (PSK) or WPA2-Personal (PSK): uncomment the 4 lines after to define the WPA and/or WPA2 version, TKIP and/or CCMP (AES) encryption
+//let pskAllowedProtocols=["WPA", "RSN"]; /* ["WPA", "RSN"] for WPA-Personal + WPA2-Personal, ["WPA"] for WPA-Personal, ["RSN"] for WPA2-Personal */
+//let pskAllowedPairwiseCiphers=["TKIP", "CCMP"]; /* ["TKIP", "CCMP"] for "CCMP (AES) TKIP", ["TKIP"] for TKIP, ["CCMP"] for CCMP (AES) */
+//let pskAllowedGroupCiphers=["TKIP", "CCMP"]; /* ["TKIP", "CCMP"] for "CCMP (AES) TKIP", ["TKIP"] for TKIP, ["CCMP"] for CCMP (AES) */
+//setWlanSecurityPsk("my_SSID", "my_psk_key_value", pskAllowedProtocols, pskAllowedPairwiseCiphers, pskAllowedGroupCiphers); // 1: ssid, 2: PSK key: 8 to 63 hexadecimal digits, 3: security protocols, 4: pairwise ciphers, 5: group ciphers
 
-// ---- 802.1X WLAN security
+// ---- Allows to configure WLAN_1 security mode in WPA-Enterprise or WPA2-Enterprise
+// A) WPA(2)-Enterprise: depending on your chosen EAP method and whether the caCertificate must be validated, define the caCertificates variable and the pkcs12 variable using the section Configuration / Certificats (1 of 2).
 
-// First, define the certificates needed using the section LAN : CACertificate, userCertificate, caCertificates and/or pkcs12.
+// B) WPA(2)-Enterprise: uncomment the 3 lines after to define the WPA and/or WPA2 version, TKIP and/or CCMP (AES) encryption
+//let eapAllowedProtocols=["WPA", "RSN"]; /* ["WPA", "RSN"] for WPA-Personal + WPA2-Personal, ["WPA"] for WPA-Personal, ["RSN"] for WPA2-Personal */
+//let eapAllowedPairwiseCiphers=["TKIP", "CCMP"]; /* ["TKIP", "CCMP"] for "CCMP (AES) TKIP", ["TKIP"] for TKIP, ["CCMP"] for CCMP (AES) */
+//let eapAllowedGroupCiphers=["TKIP", "CCMP"]; /* ["TKIP", "CCMP"] for "CCMP (AES) TKIP", ["TKIP"] for TKIP, ["CCMP"] for CCMP (AES) */
 
-// ---- Allows to configure WLAN security mode: uncomment one of the following line
-//setWlanSecurityPEAP_MSCHAPV2("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityPEAP_GTC("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityPEAP_NONE("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server (automatic 2nd phase authentication)
-//setWlanSecurityTLS("my_SSID", "qeedji_device_identity", caCertificates, pkcs12, "my_p12_password"); // access point ssid, identity, radius server CA certificates, client p12 key value (base 64 encoded), password for client p12 key
-//setWlanSecurityTTLS_PAP("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityTTLS_MSCHAP("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityTTLS_MSCHAPV2("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityTTLS_GTC("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server
-//setWlanSecurityTTLS_NONE("my_SSID", caCertificates, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // access point ssid, radius server CA certificates, device identity in radius server, anonymousIdentity free text, device password in radius server (automatic 2nd phase authentication)
-//setWlanSecurityPWD("my_SSID", "my_qeedji_device_identity", "my_qeedji_device_pwd"); // access point ssid, identity, device password in radius server
+// C) WPA(2)-Enterprise: uncomment the line after to define the CA certificate validation strategy // if null: the 802.1X CA certificate, defined in the caCertificates variable by the user, is used; if domain = common name of the trusted system certificate of the Radius server used as caCertificate, a trusted certificate embedded natively in the OS is used  
+// let domain=null; 
 
+// D) WPA(2)-Enterprise: uncomment one of the 10 following line (if the 802.1X CA certificate must not be validated, replace caCertificates by null)
+//setWlanSecurityPEAP_MSCHAPV2("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityPEAP_GTC("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityPEAP_NONE("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server (automatic 2nd phase authentication)
+//setWlanSecurityTLS("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, "qeedji_device_identity", caCertificates, domain, pkcs12, "my_p12_password"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:identity, 6:radius server CA certificates, 7:domain, 8:client p12 key value (base 64 encoded), 9:password for client p12 key
+//setWlanSecurityTTLS_PAP("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityTTLS_MSCHAP("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityTTLS_MSCHAPV2("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityTTLS_GTC("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server
+//setWlanSecurityTTLS_NONE("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, caCertificates, domain, "my_qeedji_device_identity", "my_qeedji_device_anonymousIdentity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:radius server CA certificates, 6:domain, 7:device identity in radius server, 8:anonymousIdentity free text, 9:device password in radius server (automatic 2nd phase authentication)
+//setWlanSecurityPWD("my_SSID", eapAllowedProtocols, eapAllowedPairwiseCiphers, eapAllowedGroupCiphers, "my_qeedji_device_identity", "my_qeedji_device_pwd"); // 1:access point ssid, 2:protocol, 3:pairwise cipher, 4:group cipher, 5:identity, 6:device password in radius server
 
 // ---------------------------------------
 // ---- Configuration / Output
 // ---------------------------------------
 
-//TBD
-
+//if (platform === "amp300") {
+	//setVideoOuptut("Automatic"); // possible values are "Automatic", "HDMI", "USB-C"
+	//setScreenResolution("Automatic"); // possible values are "Automatic", "1920x1080 60Hz SMPTE (1080p)", "1280x720 60Hz CEA-861", "1280x720 50Hz CEA-861", "1280x720 60Hz SONY", "1280x720 60Hz CGV CPLine AV-HD", "1280x720 60Hz SAMSUNG", "1920x1080 60Hz CEA-861", "1920x1080 50Hz CEA-861", "1920x1080 60Hz SMPTE (1080p)", "1920x1080 50Hz SMPTE (1080p)", "1920x1080 60Hz CEA" 
+	//setVesaDpmsEnabled(true); // possible values are false, true
+	//setScreenRotation(0); // possible values are 0, 90, 180, 270
+//}
+//setVolumeOfMultimediaContents(15); // possible values are 0 (for 0%) to 15 (for 100%)
 
 // ---------------------------------------
 // ---- Configuration / Servers
@@ -207,6 +197,36 @@ let pkcs12="";
 // ---- Allows to configure the NTP server timeout: uncomment the line after.
 //setNtpTimeout(5000);
 
+// ---------------------------------------
+// ---- Configuration / Certificats (2 of 2)
+// ---------------------------------------
+
+// Allows to install a certificate in the "User credentials" part and in "trusted CA certificate" of the Android "Encryption & Credentials" menu
+// 1) With a text editor (like Notepad++),
+//      - open the certificate file (.pem, .crt, ...),
+//      - select the content between from -----BEGIN CERTIFICATE----- included to -----END CERTIFICATE----- included,
+// 2) Paste then content between the single quote characters
+// When done with the configuration script, the certificate is automatically set as CA certificate by AOSP
+//-------------------------------------------------------------------------------------------------------
+let CACertificate=`-----BEGIN CERTIFICATE-----
+
+-----END CERTIFICATE-----`;
+// Uncomment then the following line to install a trusted CA certificate
+//setCACertificate("CACertificateName", CACertificate);
+
+//-------------------------------------------------------------------------------------------------------
+// Allows to install a certificate in the "User credentials" part of the Android "Encryption & Credentials" menu
+// 1) With a text editor (like Notepad++),
+//      - open the certificate file (.pem, .crt, ...),
+//      - select the content from -----BEGIN CERTIFICATE----- included to -----END CERTIFICATE----- included,
+// 2) Paste then the content between the single quote characters
+// When using an unsigned certificate, the certificate is not automatically set as CA certificate by AOSP
+//-------------------------------------------------------------------------------------------------------
+let userCertificate=`-----BEGIN CERTIFICATE-----
+
+-----END CERTIFICATE-----`;
+// Uncomment then the following line to install a user credential (user certificate)
+//setUserCertificate("userCertificateName", userCertificate);
 
 // ---------------------------------------
 // ---- Configuration / Date and time
@@ -282,6 +302,19 @@ let pkcs12="";
  * ---- Functions section
  * ---------------------------------------
  */
+
+/* Functions to check compatibility */
+function checkCompatibility() {
+	if (typeof Android !== "undefined") {
+		return true;
+	}
+	return false;
+}
+
+/* Functions to get platform */
+function getPlatform() {
+	return Android.SystemProperties().getString("ro.build.product");
+}
 
 /* Debug functions */
 /** duration 4 seconds */
@@ -414,6 +447,40 @@ function setSystemLocalLanguages(locales) {
 	}
 	Android.Preferences("Settings", "system").setString("system_locales", locales);
 }
+
+/* Functions to handle Display Output */
+function setVideoOuptut(output) {
+	if (output === "Automatic") {
+		Android.DisplayOutput().setPortType(0);
+		Android.DisplayOutput().setAutoPortType(true);
+	} else if (output === "HDMI") {
+		Android.DisplayOutput().setPortType(8);
+		Android.DisplayOutput().setAutoPortType(false);
+	} else if (output === "USB-C") {
+		Android.DisplayOutput().setPortType(11);
+		Android.DisplayOutput().setAutoPortType(false);
+	}
+}
+function setScreenResolution(labelMode) {
+	if (labelMode === "Automatic") {
+		Android.DisplayOutput().setAutoDisplayMode(true);
+	} else {
+		Android.DisplayOutput().setDisplayMode(labelMode);
+		Android.DisplayOutput().setAutoDisplayMode(false);
+	}
+}
+function setVesaDpmsEnabled(dmps) {
+	Android.DisplayOutput().setDpmsPowerModeEnabled(dmps);
+}
+function setScreenRotation(rotation) {
+	Android.DisplayOutput().setRotation(rotation);
+}
+
+/* Functions to handle Sound Output */
+function setVolumeOfMultimediaContents(volume) {
+	Android.Preferences("Settings", "System").setInt("volume_music_speaker", volume);
+}
+
 /* Function to set preferred NTP server */
 function setNtpServer(ntp_server) {
 	Android.Preferences("Settings", "Global").setString("ntp_server", ntp_server);
@@ -479,6 +546,16 @@ function setLanProxyUserPassword(host, port, parsedExclList, username, pwd) {
 	var credential = Android.ProxyInfoCredentialUserPassword(username, pwd);
 	var proxyInfo = Android.ProxyInfo(host, port, parsedExclList, 1, credential);
 	ipConfiguration.setProxySettings(1);
+	ipConfiguration.setHttpProxy(proxyInfo);
+	deleteAllLanConfig();
+	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
+}
+
+/* Function to set LAN Proxy PAC */
+function setLanProxyPAC(pac, port) {
+	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
+	var proxyInfo = Android.ProxyInfo(pac, port);
+	ipConfiguration.setProxySettings(3);
 	ipConfiguration.setHttpProxy(proxyInfo);
 	deleteAllLanConfig();
 	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
@@ -613,7 +690,7 @@ function deleteAllLanConfig() {
 	}
 }
 
-/* Function to set WLAN by DHCP */
+/* Function to set WLAN_1 by DHCP */
 function setWlanByDhcp(ssid, hiddenSSID) {
 	var ipConfiguration = Android.IpConfiguration(1, null, 0, null);
 	var allowedKeyManagement = ["NONE"];
@@ -622,7 +699,7 @@ function setWlanByDhcp(ssid, hiddenSSID) {
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Function to set WLAN IP Address */
+/* Function to set WLAN_1 IP Address */
 function setWlanIpAddress(ssid, hiddenSSID, address, netmask, gateway, dns1, dns2) {
 	var dnsServers = null;
 	if ( (dns1 !== null) && (dns2 !== null) ) {
@@ -640,7 +717,7 @@ function setWlanIpAddress(ssid, hiddenSSID, address, netmask, gateway, dns1, dns
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Function to set WLAN Proxy */
+/* Function to set WLAN_1 Proxy */
 function setWlanProxy(ssid, host, port, parsedExclList) {
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	var ipConfiguration = wifiConfiguration.getIpConfiguration();
@@ -652,7 +729,7 @@ function setWlanProxy(ssid, host, port, parsedExclList) {
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Function to set WLAN Proxy with credential user/password */
+/* Function to set WLAN_1 Proxy with credential user/password */
 function setWlanProxyUserPassword(ssid, host, port, parsedExclList, username, pwd) {
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	var ipConfiguration = wifiConfiguration.getIpConfiguration();
@@ -665,7 +742,7 @@ function setWlanProxyUserPassword(ssid, host, port, parsedExclList, username, pw
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Function to delete WLAN Proxy */
+/* Function to delete WLAN_1 Proxy */
 function deleteWlanProxy(ssid) {
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	var ipConfiguration = wifiConfiguration.getIpConfiguration();
@@ -676,7 +753,7 @@ function deleteWlanProxy(ssid) {
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Function to set WLAN Proxy PAC */
+/* Function to set WLAN_1 Proxy PAC */
 function setWlanProxyPAC(ssid, pac, port) {
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	var ipConfiguration = wifiConfiguration.getIpConfiguration();
@@ -688,7 +765,7 @@ function setWlanProxyPAC(ssid, pac, port) {
 	Android.WifiManager().save(wifiConfiguration);
 }
 
-/* Functions to set WLAN Security */
+/* Functions to set WLAN_1 Security */
 function setWlanSecurityWep(ssid, wepKey) {
 	var allowedKeyManagement = ["NONE"];
 	var allowedAuthAlgorithms = ["OPEN", "SHARED"];
@@ -702,87 +779,101 @@ function setWlanSecurityWep(ssid, wepKey) {
 	Android.WifiManager().connect(wifiConfiguration, true);
 }
 
-function setWlanSecurityPsk(ssid, key) {
+function setWlanSecurityPsk(ssid, key, allowedProtocols, pairwiseCiphers, allowedGroupCiphers) {
 	var allowedKeyManagement = ["WPA_PSK"];
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	wifiConfiguration.setAllowedKeyManagement(allowedKeyManagement);
+	wifiConfiguration.setAllowedProtocols(allowedProtocols);
 	wifiConfiguration.setPreSharedKey(key);
+	wifiConfiguration.setAllowedPairwiseCiphers(pairwiseCiphers);
+	wifiConfiguration.setAllowedGroupCiphers(allowedGroupCiphers);
 	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 	Android.WifiManager().connect(wifiConfiguration, true);
 }
 
-function setWlanSecurityGeneric(ssid, eapMethod, phase2Method, caCertificates, identity, anonymousIdentity, pwd) {
+function setWlanSecurityCaCertificates(wifiEnterpriseConfig, caCertificates, domain) {
+	if (domain !== null) {
+		wifiEnterpriseConfig.setDomainSuffixMatch(domain);
+		wifiEnterpriseConfig.setCaPath("/system/etc/security/cacerts");
+	} else if (caCertificates !== null) {
+		wifiEnterpriseConfig.setCaCertificates(caCertificates);
+	}
+}
+
+function setWlanSecurityGeneric(ssid, eapMethod, phase2Method, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
 	var allowedKeyManagement = ["WPA_EAP", "IEEE8021X"];
 	var wifiEnterpriseConfig = Android.WifiEnterpriseConfig();
 	wifiEnterpriseConfig.setEapMethod(eapMethod);
 	wifiEnterpriseConfig.setPhase2Method(phase2Method);
-	if (caCertificates !== null) {
-		wifiEnterpriseConfig.setCaCertificates(caCertificates);
-	}
+	setWlanSecurityCaCertificates(wifiEnterpriseConfig, caCertificates, domain);
 	wifiEnterpriseConfig.setIdentity(identity);
 	wifiEnterpriseConfig.setAnonymousIdentity(anonymousIdentity);
 	wifiEnterpriseConfig.setPassword(pwd);
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	wifiConfiguration.setAllowedKeyManagement(allowedKeyManagement);
-	wifiConfiguration.setWifiEnterpriseConfig(wifiEnterpriseConfig)
+	wifiConfiguration.setAllowedProtocols(allowedProtocols);
+	wifiConfiguration.setAllowedPairwiseCiphers(pairwiseCiphers);
+	wifiConfiguration.setAllowedGroupCiphers(allowedGroupCiphers);
+	wifiConfiguration.setWifiEnterpriseConfig(wifiEnterpriseConfig);
 	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 	Android.WifiManager().connect(wifiConfiguration, true);
 }
 
-function setWlanSecurityPEAP(ssid, phase2Method, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityGeneric(ssid, 0, phase2Method, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityPEAP(ssid, phase2Method, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityGeneric(ssid, 0, phase2Method, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityPEAP_NONE(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityPEAP(ssid, 0, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityPEAP_NONE(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityPEAP(ssid, 0, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityPEAP_MSCHAPV2(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityPEAP(ssid, 3, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityPEAP_MSCHAPV2(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityPEAP(ssid, 3, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityPEAP_GTC(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityPEAP(ssid, 4, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityPEAP_GTC(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityPEAP(ssid, 4, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
 
-function setWlanSecurityTLS(ssid, identity, caCertificates, clientPkcs12, pwd) {
+function setWlanSecurityTLS(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, identity, caCertificates, domain, clientPkcs12, pwd) {
 	var allowedKeyManagement = ["WPA_EAP", "IEEE8021X"];
 	var wifiEnterpriseConfig = Android.WifiEnterpriseConfig();
 	wifiEnterpriseConfig.setEapMethod(1);
 	wifiEnterpriseConfig.setPhase2Method(0);
-	if (caCertificates !== null) {
-		wifiEnterpriseConfig.setCaCertificates(caCertificates);
-	}
+	setWlanSecurityCaCertificates(wifiEnterpriseConfig, caCertificates, domain);
 	wifiEnterpriseConfig.setIdentity(identity);
 	wifiEnterpriseConfig.setClientPkcs12(clientPkcs12, pwd);
 	var wifiConfiguration = getWlanConfiguration(ssid);
 	wifiConfiguration.setAllowedKeyManagement(allowedKeyManagement);
+	wifiConfiguration.setAllowedProtocols(allowedProtocols);
+	wifiConfiguration.setAllowedPairwiseCiphers(pairwiseCiphers);
+	wifiConfiguration.setAllowedGroupCiphers(allowedGroupCiphers);
 	wifiConfiguration.setWifiEnterpriseConfig(wifiEnterpriseConfig)
 	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 	Android.WifiManager().connect(wifiConfiguration, true);
 }
 
-function setWlanSecurityTTLS(ssid, phase2Method, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityGeneric(ssid, 2, phase2Method, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS(ssid, phase2Method, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityGeneric(ssid, 2, phase2Method, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityTTLS_NONE(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityTTLS(ssid, 0, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS_NONE(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityTTLS(ssid, 0, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityTTLS_PAP(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityTTLS(ssid, 1, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS_PAP(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityTTLS(ssid, 1, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityTTLS_MSCHAP(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityTTLS(ssid, 2, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS_MSCHAP(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityTTLS(ssid, 2, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityTTLS_MSCHAPV2(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityTTLS(ssid, 3, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS_MSCHAPV2(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityTTLS(ssid, 3, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
-function setWlanSecurityTTLS_GTC(ssid, caCertificates, identity, anonymousIdentity, pwd) {
-	setWlanSecurityTTLS(ssid, 4, caCertificates, identity, anonymousIdentity, pwd);
+function setWlanSecurityTTLS_GTC(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd) {
+	setWlanSecurityTTLS(ssid, 4, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, caCertificates, domain, identity, anonymousIdentity, pwd);
 }
 
-function setWlanSecurityPWD(ssid, identity, pwd) {
-	setWlanSecurityGeneric(ssid, 3, 0, null, identity, null, pwd);
+function setWlanSecurityPWD(ssid, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, identity, pwd) {
+	setWlanSecurityGeneric(ssid, 3, 0, allowedProtocols, pairwiseCiphers, allowedGroupCiphers, null, null, identity, null, pwd);
 }
 
 function getWlanConfiguration(ssid) {
