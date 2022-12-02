@@ -1,15 +1,19 @@
 /**
  * Function: configuration-by-script for Qeedji AOSP devices
- * Version: 1.10.18 *
+ * Version: 1.10.19
  * File name pattern: the file name must match one of these formats:
  * - common to several devices 
  *    - 000000000000.js
  * 	  - configuration.js 
  * - specific for one device 
- * 	  - <Device_MAC>.js (format ABCDEFABCDEF.js).
- *      - If the device has a builtin LAN connector, <Device_MAC> value comes from the LAN MAC adress
+ * 	  - <Device_MAC_ID>.js (format ABCDEFABCDEF.js).
+ *      - If the device has a builtin LAN connector, <Device_MAC> value comes from the LAN MAC address
  *      - Else, <Device_MAC> value comes from the WLAN_1 MAC adress
  *      - Exception : If the device hasn't a builtin RJ45 connector, but use an external ethernet adapter, <Device_MAC> value comes from the LAN MAC address of the external adapter
+ * - when working with CMS, depending on the identification method specified in the APK form
+ * 	  - <device_MAC_ID_addr>.configuration.js
+ * 	  - <device_Hostname>.configuration.js
+ * 	  - <device_UUID>.configuration.js
  */
 
 // ---------------------------------------
@@ -38,20 +42,30 @@ let platform = getPlatform();
 // ---- Allows to define the WebServer port: uncomment the line after
 //setWebserverHttpPort("80");
 
-// ---- Allows to update a existing credential (label, user , password) or create a new credential (label, user password). Uncomment the line after. Copy the line hereafter as much as you have to create new credentials.
-//setWebserverCredentialUserPassword("default","admin","admin"); // 1: credential label, 2: username, 3: password
+// ---- Allows to reset or update the default Admin credential (user , password). Uncomment the line after. 
+//setWebserverCredentialUserPasswordAdmin("admin","admin"); // 1: username for Admin credential, 2: password for Admin credential
 
-// ---- Allows to set the credential affected to the Web UI Admin connection profile: uncomment the line after.
-//setWebserverCredentialWebUIAdmin("default"); // The parameter is the credential label. Be sure it exists.
+// ---- Allows to create/update as many additional custom credential as wanted. Uncomment as much line as you need to create all your wished credentials.
+//setWebserverCredentialUserPasswordCustom("myCredential1","myUser1","myPassword1"); // 1: credential label of the credential to create, 2: username, 3: password
+//setWebserverCredentialUserPasswordCustom("myCredential2","myUser2","myPassword2"); // 1: credential label of the credential to create, 2: username, 3: password
+//setWebserverCredentialUserPasswordCustom("myCredential3","myUser3","myPassword3"); // 1: credential label of the credential to create, 2: username, 3: password
+//setWebserverCredentialUserPasswordCustom("myCredential4","myUser4","myPassword4"); // 1: credential label of the credential to create, 2: username, 3: password
 
-// ---- Allows to set the credential affected to the Web Service connection profile: uncomment the line after.
-//setWebserverCredentialWebService("default"); // The parameter is the credential label. Be sure it exists.
+// ---- Allows to set the only one credential affected to the "Administration user" connection profile: uncomment one of the 2 lines after.
+//setWebserverCredentialAdministrationUserAdmin(); // the default "Admin" credential is chosen for the Administration user connection profile. 
+//setWebserverCredentialAdministrationUserCustom("myCredential1"); // one of your own credential is chosen for the Administration user connection profile. Be sure that the used credential label has been created just before.
 
-// ---- Allows to set the credential affected to the Web UI Appli connection profile: uncomment the line after.
-//setWebserverCredentialWebUIAppli("default"); // The parameter is the credential label. Be sure it exists.
+// ---- Allows to set the only one credential affected to the "Web Service" connection profile: uncomment one of the 2 lines after.
+//setWebserverCredentialWebServiceAdmin(); // the default "Admin" credential is chosen for the Web Service connection profile
+//setWebserverCredentialWebServiceCustom("myCredential2"); // one of your own credential is chosen for the Web Service  connection profile.  Be sure that the used credential label has been created just before.
 
-// ---- Allows to set the credential affected to the WebDAV connection profile: uncomment the line after.
-//setWebserverCredentialWebDav("default"); // The parameter is the credential label. Be sure it exists.
+// ---- Allows to set the only one credential affected to the "Application user" connection profile: uncomment one of the 2 lines after.
+//setWebserverCredentialApplicationUserAdmin(); // the default "Admin" credential is chosen for the Application user connection profile
+//setWebserverCredentialApplicationUserCustom("myCredential3"); // one of your own credential is chosen for the Application user connection profile. Be sure that the used credential label has been created just before.
+
+// ---- Allows to set the only one credential affected to the "PublishingSoftware" connection profile: uncomment one of the 2 lines after.
+//setWebserverCredentialPublishingSoftwareAdmin(); // the default "Admin" credential is chosen for the Publishing software connection profile
+//setWebserverCredentialPublishingSoftwareCustom("myCredential4"); // one of your own credential is chosen for the Publishing software connection profile. Be sure that the used credential label has been created just before.
 
 // ---------------------------------------
 // ---- Configuration / Certificats (1 of 2) 
@@ -187,6 +201,19 @@ let pkcs12="";
 	//setScreenRotation(0); // possible values are 0, 90, 180, 270
 //}
 //setVolumeOfMultimediaContents(15); // possible values are 0 (for 0%) to 15 (for 100%)
+
+// ---------------------------------------
+// ---- Configuration / Apps
+// ---------------------------------------
+
+// ---- Allows to delete all Apps installed in your AQS desktop: uncomment the line after.
+//eraseAllApps();
+// ---- Allows to delete only an App installed in your AQS desktop by specifying its applicationId: uncomment the line after and adjust with the applicationId of the App to delete.
+//deleteApp("myAppApplicationId"); // ex: "tech.qeedji.tablet.system_button"
+// ---- Allows to activate an App installed in your AQS desktop that has been inactivated by specifying its applicationId: uncomment the line after and adjust with the applicationId of the App to activate.
+//activateApp("myAppApplicationId"); // ex: "tech.qeedji.tablet.system_button"
+// ---- Allows to deactivate an App installed in your AQS desktop by specifying its applicationId: uncomment the line after and adjust with the applicationId of the App to deactivate.
+//deactivateApp("myAppApplicationId"); // ex: "tech.qeedji.tablet.system_button"
 
 // ---------------------------------------
 // ---- Configuration / Servers
@@ -415,7 +442,7 @@ function getWebserverHttpPort() {
 function setWebserverHttpPort(port) {
 	Android.SystemProperties().setString("persist.sys.webserver.http.port", port);
 }
-function setWebserverCredentialUserPassword(credentialLabel, username, password) {
+function setWebserverCredentialUserPasswordCustom(credentialLabel, username, password) {
 	var un = credentialLabel + ".username";
 	Android.Preferences("SharedPreferences", "tech.qeedji.webserver.app", "credentials").setString(un, username);
 	var pw = credentialLabel + ".password";
@@ -423,19 +450,38 @@ function setWebserverCredentialUserPassword(credentialLabel, username, password)
 	var typ = credentialLabel + ".type";
 	Android.Preferences("SharedPreferences", "tech.qeedji.webserver.app", "credentials").setString(typ, "user-password");
 }
-function setWebserverCredentialWebUIAdmin(credentialLabel) {
+function setWebserverCredentialUserPasswordAdmin(username, password) {
+	var un = "default" + ".username";
+	Android.Preferences("SharedPreferences", "tech.qeedji.webserver.app", "credentials").setString(un, username);
+	var pw = "default" + ".password";
+	Android.Preferences("SharedPreferences", "tech.qeedji.webserver.app", "credentials").setString(pw, password);
+	var typ = "default" + ".type";
+	Android.Preferences("SharedPreferences", "tech.qeedji.webserver.app", "credentials").setString(typ, "user-password");
+}
+function setWebserverCredentialAdministrationUserAdmin() {
+	Android.SystemProperties().setString("persist.sys.webserver.webuiadmin.credential", "default");
+}
+function setWebserverCredentialAdministrationUserCustom(credentialLabel) {
 	Android.SystemProperties().setString("persist.sys.webserver.webuiadmin.credential", credentialLabel);
 }
-function setWebserverCredentialWebService(credentialLabel) {
+function setWebserverCredentialWebServiceAdmin() {
+	Android.SystemProperties().setString("persist.sys.webserver.webservice.credential", "default");
+}
+function setWebserverCredentialWebServiceCustom(credentialLabel) {
 	Android.SystemProperties().setString("persist.sys.webserver.webservice.credential", credentialLabel);
 }
-function setWebserverCredentialWebUIAppli(credentialLabel) {
+function setWebserverCredentialApplicationUserAdmin() {
+	Android.SystemProperties().setString("persist.sys.webserver.webuiappli.credential", "default");
+}
+function setWebserverCredentialApplicationUserCustom(credentialLabel) {
 	Android.SystemProperties().setString("persist.sys.webserver.webuiappli.credential", credentialLabel);
 }
-function setWebserverCredentialWebDav(credentialLabel) {
+function setWebserverCredentialPublishingSoftwareAdmin() {
+	Android.SystemProperties().setString("persist.sys.webserver.webdav.credential", "default");
+}
+function setWebserverCredentialPublishingSoftwareCustom(credentialLabel) {
 	Android.SystemProperties().setString("persist.sys.webserver.webdav.credential", credentialLabel);
 }
-
 /* Functions to handle locales */
 function getSystemLocalLanguages() {
 	return Android.Preferences("Settings", "system").getString("system_locales", "");
@@ -479,6 +525,20 @@ function setScreenRotation(rotation) {
 /* Functions to handle Sound Output */
 function setVolumeOfMultimediaContents(volume) {
 	Android.Preferences("Settings", "System").setInt("volume_music_speaker", volume);
+}
+
+/* Functions to handle apps */
+function eraseAllApps() {
+	Android.PackageManager().eraseAllApps();
+}
+function deleteApp(package_id) {
+	Android.PackageManager().deleteApp(package_id);
+}
+function activateApp(package_id) {
+	Android.PackageManager().activateApp(package_id);
+}
+function deactivateApp(package_id) {
+	Android.PackageManager().deactivateApp(package_id);
 }
 
 /* Function to set preferred NTP server */
@@ -532,44 +592,51 @@ function setLanIpAddress(address, netmask, gateway, dns1, dns2) {
 
 /* Function to set LAN Proxy */
 function setLanProxy(host, port, parsedExclList) {
-	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
+		var ethManager = Android.EthernetManager();
+	var ethConfig = ethManager.getConfiguredNetwork(0);
+	var ipConfiguration = ethConfig.getIpConfiguration();
 	var proxyInfo = Android.ProxyInfo(host, port, parsedExclList);
 	ipConfiguration.setProxySettings(1);
 	ipConfiguration.setHttpProxy(proxyInfo);
-	deleteAllLanConfig();
-	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
+	ethConfig.setIpConfiguration(ipConfiguration);
+	Android.EthernetManager().save(ethConfig);
 }
 
 /* Function to set LAN Proxy with credential user/password */
 function setLanProxyUserPassword(host, port, parsedExclList, username, pwd) {
-	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
+	var ethManager = Android.EthernetManager();
+	var ethConfig = ethManager.getConfiguredNetwork(0);
+	var ipConfiguration = ethConfig.getIpConfiguration();
 	var credential = Android.ProxyInfoCredentialUserPassword(username, pwd);
 	var proxyInfo = Android.ProxyInfo(host, port, parsedExclList, 1, credential);
 	ipConfiguration.setProxySettings(1);
 	ipConfiguration.setHttpProxy(proxyInfo);
-	deleteAllLanConfig();
-	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
+	ethConfig.setIpConfiguration(ipConfiguration);
+	Android.EthernetManager().save(ethConfig);
 }
 
 /* Function to set LAN Proxy PAC */
 function setLanProxyPAC(pac, port) {
-	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
+	var ethManager = Android.EthernetManager();
+	var ethConfig = ethManager.getConfiguredNetwork(0);
+	var ipConfiguration = ethConfig.getIpConfiguration();
 	var proxyInfo = Android.ProxyInfo(pac, port);
 	ipConfiguration.setProxySettings(3);
 	ipConfiguration.setHttpProxy(proxyInfo);
-	deleteAllLanConfig();
-	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
+	ethConfig.setIpConfiguration(ipConfiguration);
+	Android.EthernetManager().save(ethConfig);
 }
 
 /* Function to delete LAN Proxy */
 function deleteLanProxy() {
-	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
+	var ethManager = Android.EthernetManager();
+	var ethConfig = ethManager.getConfiguredNetwork(0);
+	var ipConfiguration = ethConfig.getIpConfiguration();
 	ipConfiguration.setProxySettings(0);
 	ipConfiguration.setHttpProxy(null);
-	deleteAllLanConfig();
-	Android.EthernetManager().setConfiguration("eth0", ipConfiguration);
+	ethConfig.setIpConfiguration(ipConfiguration);
+	Android.EthernetManager().save(ethConfig);
 }
-
 /* Functions to set LAN 802.1X Security */
 function setLanSecurityGeneric1(eapMethod, identity, pwd) {
 	var ipConfiguration = Android.EthernetManager().getConfiguration("eth0");
@@ -725,7 +792,6 @@ function setWlanProxy(ssid, host, port, parsedExclList) {
 	ipConfiguration.setProxySettings(1);
 	ipConfiguration.setHttpProxy(proxyInfo);
 	wifiConfiguration.setIpConfiguration(ipConfiguration);
-	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 }
 
@@ -738,7 +804,6 @@ function setWlanProxyUserPassword(ssid, host, port, parsedExclList, username, pw
 	ipConfiguration.setProxySettings(1);
 	ipConfiguration.setHttpProxy(proxyInfo);
 	wifiConfiguration.setIpConfiguration(ipConfiguration);
-	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 }
 
@@ -749,7 +814,6 @@ function deleteWlanProxy(ssid) {
 	ipConfiguration.setProxySettings(0);
 	ipConfiguration.setHttpProxy(null);
 	wifiConfiguration.setIpConfiguration(ipConfiguration);
-	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 }
 
@@ -761,9 +825,9 @@ function setWlanProxyPAC(ssid, pac, port) {
 	ipConfiguration.setProxySettings(3);
 	ipConfiguration.setHttpProxy(proxyInfo);
 	wifiConfiguration.setIpConfiguration(ipConfiguration);
-	deleteAllWlanConfig();
 	Android.WifiManager().save(wifiConfiguration);
 }
+
 
 /* Functions to set WLAN_1 Security */
 function setWlanSecurityWep(ssid, wepKey) {
