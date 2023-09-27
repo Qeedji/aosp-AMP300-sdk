@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:sharedUserId="android.uid.system"
+    android:sharedUserMaxSdkVersion="32">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Av_stream_reader_screensaver"
+        tools:targetApi="31">
+
+        <service
+            android:name=".Screensaver"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <provider
+            android:name=".MySharedPreferenceAPI"
+            android:authorities="tech.qeedji.av_stream_reader_screensaver"
+            android:exported="true"
+            android:initOrder="100"
+            android:multiprocess="false"
+            android:singleUser="false"
+            android:visibleToInstantApps="true">
+            <meta-data
+                android:name="tech.qeedji.webserver.odata.admin.expose"
+                android:value="AppPreferences" />
+        </provider>
+        <meta-data
+            android:name="tech.qeedji.webserver.webuiex.admin.path"
+            android:value="assets/webuiex" />
+    </application>
+
+</manifest>
