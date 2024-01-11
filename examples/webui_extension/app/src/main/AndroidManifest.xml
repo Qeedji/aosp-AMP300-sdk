@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:sharedUserId="android.uid.system"
+    android:sharedUserMaxSdkVersion="32">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher_webui_extension_001b"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.WebUIExtension"
+        tools:targetApi="31">
+
+        <meta-data
+            android:name="tech.qeedji.webserver.webuiex.admin.path"
+            android:value="assets/webuiex_admin" />
+        <meta-data
+            android:name="tech.qeedji.webserver.webuiex.appli.path"
+            android:value="assets/webuiex_appli" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name=".MySharedAppliPreferenceAPI"
+            android:authorities="tech.qeedji.webui_extension"
+            android:exported="true"
+            android:initOrder="100"
+            android:multiprocess="false"
+            android:singleUser="false"
+            android:visibleToInstantApps="true">
+            <meta-data
+                android:name="tech.qeedji.webserver.odata.appli.expose"
+                android:value="AppPreferences" />
+        </provider>
+        <provider
+            android:name=".MySharedAdminPreferenceAPI"
+            android:authorities="tech.qeedji.webui_extension.admin"
+            android:exported="true"
+            android:initOrder="100"
+            android:multiprocess="false"
+            android:singleUser="false"
+            android:visibleToInstantApps="false">
+            <meta-data
+                android:name="tech.qeedji.webserver.odata.admin.expose"
+                android:value="AppPreferences" />
+        </provider>
+    </application>
+
+</manifest>

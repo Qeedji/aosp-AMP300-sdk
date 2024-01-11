@@ -1,0 +1,71 @@
+/* © 2023 INNES SA (labs@innes.fr). All rights are reserved. */
+
+html {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0;
+  padding: 1em 0.5em 0.5em 0.5em;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+#form {
+  width: 100%;
+  height: 80%;
+}
+
+.label-input-form {
+  width: 100%;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-content: flex-start;
+  align-items: baseline;
+  gap: 0.7em;
+}
+
+label {
+  white-space: nowrap;
+}
+
+.color-label {
+  align-self: center;
+}
+
+.color-container {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c0c4cc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-container > .color {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+}
+
+.color-container > .color > input {
+  padding: 0;
+  border: none;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  color: #606266;
+  background-color: white;
+  box-sizing: border-box;
+  outline: none;
+}
